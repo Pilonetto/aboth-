@@ -1,0 +1,5 @@
+/__pycache__/utils.cpython-37.pyc
+/__pycache__/*.pyc
+/dist/aboth/Cython/Compiler/*.pyd
+/dist/aboth/Cython/Tempita/*.pyd
+/dist/aboth
