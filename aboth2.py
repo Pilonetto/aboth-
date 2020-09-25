@@ -60,6 +60,9 @@ for index, row in dfs.iterrows():
     else:
         df = pd.DataFrame (columns = ['Data',	'Fechamento','Variação', 'Variação (%)', 'Abertura', 'Máxima', 'Mínima','Volume'])
         imax = 0
+        lastday = 1
+        lastmonth = 1
+        lastyear = 2018
     
     for page in range(9):
         print('Looking for page: ' + str(page))
