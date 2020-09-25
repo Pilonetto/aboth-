@@ -19,7 +19,7 @@ from utils import Globals
 
 
 
-baseUrl = '''https://br.advfn.com/bolsa-de-valores/bovespa/%s/historico/mais-dados-historicos?current=%d&Date1=01/01/18&Date2=%d/%d/20'''
+baseUrl = '''https://br.advfn.com/bolsa-de-valores/bovespa/%s/historico/mais-dados-historicos?current=%d&Date1=%d/%d/%d&Date2=%d/%d/20'''
 
 
 settings = Settings()
@@ -41,13 +41,29 @@ dfs = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')
 
 print('''Updated all tables ''')
 for index, row in dfs.iterrows(): 
-    print('''Updated data of: %s''' % (row['empresa']) )
-    df = pd.DataFrame (columns = ['Data',	'Fechamento','Variação', 'Variação (%)', 'Abertura', 'Máxima', 'Mínima','Volume'])
-    imax = 0
     action_name = row['table_code']
+    
+    print('''Updated data of: %s''' % (row['empresa']) )
+    if (os.path.exists(settings.workpath+'/tables/' + action_name + '.csv')):
+        df = pd.read_csv(settings.workpath+'/tables/' + action_name + '.csv',sep=';' ,decimal= ',')
+        if df.empty:
+            lastday = 1
+            lastmonth = 1
+            lastyear = 2018
+        else:
+            df['Date'] = pd.to_datetime(df.Data)
+            mxDate = df['Date'].max()
+            lastday = mxDate.day
+            lastmonth = mxDate.month
+            lastyear = mxDate.year -2000 # year in two digits
+            imax = len(df)
+    else:
+        df = pd.DataFrame (columns = ['Data',	'Fechamento','Variação', 'Variação (%)', 'Abertura', 'Máxima', 'Mínima','Volume'])
+        imax = 0
+    
     for page in range(9):
         print('Looking for page: ' + str(page))
-        driver.get(baseUrl % (action_name,page,today.day, today.month ))    
+        driver.get(baseUrl % (action_name,page, lastday,lastmonth,lastyear, today.day, today.month ))    
         baseTable = driver.find_elements_by_class_name("result");    
         for td in baseTable:
             arr = td.text.split(' ')
@@ -58,7 +74,8 @@ for index, row in dfs.iterrows():
         if len(baseTable) == 0:
             break
         
-    df.drop_duplicates()
+    df = df.drop_duplicates()
+    df = df.reset_index()
     df.to_csv(settings.workpath+'/tables/' + action_name + '.csv',sep=';' ,decimal= ',',index=False)      
 
 

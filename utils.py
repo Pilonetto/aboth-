@@ -27,4 +27,4 @@ class Globals:
            return '12'
             
     def fmt_date(self, day, month, year):
-        return day + '/'+ self.month_name_to_num(month) + '/'+ year
+        return self.month_name_to_num(month)+ '/'+ day  + '/'+ year
