@@ -77,6 +77,7 @@ for index, row in dfs.iterrows():
         if len(baseTable) == 0:
             break
         
+    df['Date'] = pd.to_datetime(df.Data)    
     df = df.drop_duplicates()
     df = df.reset_index()
     df.to_csv(settings.workpath+'/tables/' + action_name + '.csv',sep=';' ,decimal= ',',index=False)      
