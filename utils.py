@@ -63,7 +63,7 @@ class Globals:
             dfmm = dfmm.reset_index(drop=True)
             
             
-            dfmm.to_csv(settings.workpath+'/tables/' +name +'.csv',sep=';' ,decimal= ',')
+            dfmm.to_csv(settings.workpath+'/tables/' +name +'.csv',sep=';' ,decimal= ',',index=False)
         return
     
     def performs_mme(self,settings, name, window):

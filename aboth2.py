@@ -41,8 +41,8 @@ dfs = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')
 def update_all_tables():
     telbot.send('''Updated all tables ''')
     for index, row in dfs.iterrows(): 
-        if row['empresa'] != 'SBSP3':
-            continue
+        #if row['empresa'] != 'SBSP3':
+        #    continue
         action_name = row['table_code']
         
         telbot.send('''Updated data of: %s''' % (row['empresa']) )
@@ -98,6 +98,7 @@ def update_all_tables():
             
         df['Date'] = pd.to_datetime(df.Data)    
         df = df.drop_duplicates()
+        df = df[~df.Volume.isin(['0'])]
         df = df.reset_index(drop=True)
         df.to_csv(settings.workpath+'/tables/' + action_name + '.csv',sep=';' ,decimal= ',',index=False)      
 
@@ -192,7 +193,7 @@ def update(tempo):
     df.to_csv(settings.planpath,sep=';' ,decimal= ',',index=False)  
     driver.stop_client()
     driver.close()
-#update_all_tables()
+update_all_tables()
     
 while True:
     update(settings.interval)      
