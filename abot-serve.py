@@ -48,6 +48,21 @@ def empresas():
         except:
             return  json.dumps({'test':False})          
         
+@app.route('/cotacoes',methods = ['GET'])
+def cotacoes():
+    if request.method == 'GET':        
+        try:            
+            df = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')   
+            df['qtde'] = df['qtde'].astype('float32')
+            df = df.sort_values(by=['qtde'], ascending=False)
+            df = df.reset_index(drop=True)
+            return json.dumps(df.to_json(orient = 'index'), cls=BotEncoder) 
+              
+          
+        except:
+            return  json.dumps({'test':False}) 
+        
+
 
 @app.route('/test',methods = ['GET'])
 def test():

@@ -12,8 +12,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
+from cfg import Settings
+from utils import Globals
 
 from sklearn.cluster import KMeans
+
+
+settings = Settings()
+globais = Globals()
 
 
 #function for ordering cluster numbers
@@ -28,23 +34,36 @@ def order_cluster(cluster_field_name, target_field_name,df,ascending):
 
 
 # Import CSV file into pandas dataframe
-df = pd.read_csv('D:/aboth-/tables/banco-do-brasil-on-BBAS3.csv',sep=';' ,decimal= ',')
+df = pd.read_csv(settings.workpath+'/tables/' +'ambev-s-a-on-ABEV3.csv',sep=';' ,decimal= ',')
 
-df = df.head(75 + 12)
+df = df.head(45)
 
-df['Mínima'] = df['Mínima'].astype('float32')
+df['Fechamento'] = df['Fechamento'].astype('float32')
 
+df = df.sort_values(by=['Date'], ascending=False)
+df = df.reset_index(drop=True)
+            
 
 #apply clustering
 kmeans = KMeans(n_clusters=4)
-kmeans.fit(df[['Mínima']])
-df['TotalCluster'] = kmeans.predict(df[['Mínima']])
+kmeans.fit(df[['Fechamento']])
+df['TotalCluster'] = kmeans.predict(df[['Fechamento']])
 
 df['TotalCluster'].describe()
 #order the cluster numbers
-dfclient = order_cluster('TotalCluster', 'Mínima',df,True)
+dfclient = order_cluster('TotalCluster', 'Fechamento',df,True)
 
 
-dfTest = df[df['TotalCluster'] == 0]
+dfTest = dfclient['TotalCluster']
+ax = dfTest.plot.hist(bins=12, alpha=0.5)
+dfclient['TotalCluster']
+dfclient['TotalCluster'] = dfclient['TotalCluster'].astype('int8')
 
-print(dfTest['Mínima'].min())
+idx = dfclient['TotalCluster'].value_counts()[dfclient['TotalCluster'].value_counts() == 23].index[0]
+
+dfTest = dfclient[ dfclient.TotalCluster == idx]
+print(df['Fechamento'].min())
+print(df['Fechamento'].max())
+
+print(dfTest['Fechamento'].min())
+print(dfTest['Fechamento'].max())

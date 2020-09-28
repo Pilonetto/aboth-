@@ -11,7 +11,7 @@ class Settings:
         try:
             self.planpath = dConfig['general']['planpath']
             
-            #self.plantath = self.plantath.replace('\' , '/')
+            #self.plantath = self.plantath.replace('\\' , '//')
         except:
             self.planpath = ''
 
@@ -19,7 +19,7 @@ class Settings:
         try:
             self.workpath = dConfig['general']['workpath']
             
-            #self.plantath = self.plantath.replace('\' , '/')
+            #self.plantath = self.plantath.replace('\\' , '//')
         except:
             self.workpath = ''
             
@@ -29,7 +29,7 @@ class Settings:
             self.interval = 30      
             
         try:
-            self.yourname = int(dConfig['general']['yourname'])
+            self.yourname = str(dConfig['general']['yourname'])
         except:
             self.yourname = 'Strange'      
             
