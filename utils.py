@@ -46,6 +46,25 @@ class Globals:
     
     def fmt_float(self, value):
         return value.replace(',','.')
+
+    def save_mme(self,settings, name):
+        
+        dfmm = pd.read_csv(settings.workpath+'/tables/' +name +'.csv',sep=';' ,decimal= ',') 
+        if dfmm.empty:
+            print('No data')
+        else:
+            dfmm = dfmm.sort_values(by=['Date'], ascending=True)
+            dfmm = dfmm.reset_index(drop=True)
+                        
+            dfmm['mme15'] = dfmm['Fechamento'].rolling(15).mean()
+            dfmm['mme45'] = dfmm['Fechamento'].rolling(45).mean()
+            dfmm['mme70'] = dfmm['Fechamento'].rolling(70).mean()
+            dfmm = dfmm.sort_values(by=['Date'], ascending=False)
+            dfmm = dfmm.reset_index(drop=True)
+            
+            
+            dfmm.to_csv(settings.workpath+'/tables/' +name +'.csv',sep=';' ,decimal= ',')
+        return
     
     def performs_mme(self,settings, name, window):
         
@@ -56,15 +75,39 @@ class Globals:
             dfmm = dfmm.sort_values(by=['Date'], ascending=True)
             dfmm = dfmm.reset_index(drop=True)
                         
-            dfmm['mme15'] = dfmm['Fechamento'].rolling(15).mean()
-            dfmm['mme45'] = dfmm['Fechamento'].rolling(45).mean()
-            dfmm['mme70'] = dfmm['Fechamento'].rolling(70).mean()
+            dfmm['mme'] = dfmm['Fechamento'].rolling(window).mean()
             dfmm = dfmm.sort_values(by=['Date'], ascending=False)
             dfmm = dfmm.reset_index(drop=True)
             dfmm = dfmm.iloc[[0]]
             res = dfmm['mme'].values[0]
             
-            dfmm.to_csv(settings.workpath+'/tables/' +name +'.csv',sep=';' ,decimal= ',')
+        return res
+    
+    def analisys_mme(self,settings, name):
+        res = 0
+        dfmm = pd.read_csv(settings.workpath+'/tables/' +name +'.csv',sep=';' ,decimal= ',') 
+        if dfmm.empty:
+            res = 0
+        else:
+            dfmm = dfmm.sort_values(by=['Date'], ascending=False)
+            dfmm = dfmm.reset_index(drop=True)
+            
+            ltmmm1 = dfmm[dfmm['Date'] == dfmm['Date'].max()].mme15.values[0]            
+            ltmmm2 = dfmm[dfmm['Date'] == dfmm['Date'].max()].mme45.values[0]  
+            ltmmm3 = dfmm[dfmm['Date'] == dfmm['Date'].max()].mme70.values[0]  
+            
+            if ltmmm1 < ltmmm2:
+                if ltmmm2 < ltmmm3:
+                    res = 0 #queda
+                else:
+                    res = 1 # assumir neutro por enquanto
+            if ltmmm1 > ltmmm2:
+                if ltmmm2 > ltmmm3:
+                    res = 2 #Alta
+                else:
+                    res = 1 # assumir neutro por enquanto
+            
+            
         return res
     def performs_hitory(self,settings, name):
         df = pd.read_csv(settings.workpath+'/tables/' +name +'.csv',sep=';' ,decimal= ',') 
@@ -76,7 +119,10 @@ class Globals:
             df = df.sort_values(by=['Date'], ascending=False)
             df = df.reset_index(drop=True)
             #apply clustering
-            kmeans = KMeans(n_clusters=4)
+            #kmeans = KMeans(n_clusters=4)
+            kmeans = KMeans(algorithm='auto', copy_x=True, init='k-means++', max_iter=300,
+                   n_clusters=3, n_init=10, n_jobs=None, precompute_distances='auto',
+                   random_state=0, tol=0.0001, verbose=0)
             kmeans.fit(df[['Fechamento']])
             df['TotalCluster'] = kmeans.predict(df[['Fechamento']])
             

@@ -47,7 +47,28 @@ def empresas():
           
         except:
             return  json.dumps({'test':False})          
-        
+
+@app.route('/mediamovel/<empresa>',methods = ['GET'])
+def mediamovel(empresa):
+    if request.method == 'GET':        
+        try:            
+            df = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')
+            
+            code = df.loc[df['empresa'] == empresa].table_code.values[0]
+
+            dfdados = pd.read_csv(settings.workpath+'/tables/' + code + '.csv',sep=';' ,decimal= ',')
+
+            dfdados = dfdados[['Date', 'mme15','mme45', 'mme70']]
+            
+            dfdados = dfdados.head(200)
+
+            return json.dumps(dfdados.to_json(orient = 'index'), cls=BotEncoder) 
+              
+          
+        except:
+            return  json.dumps({'test':False})          
+
+
 @app.route('/cotacoes',methods = ['GET'])
 def cotacoes():
     if request.method == 'GET':        

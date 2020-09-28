@@ -35,7 +35,6 @@ options = webdriver.ChromeOptions()
 options.add_argument('headless')
 
 today = datetime.now()
-driver = webdriver.Chrome(executable_path=chromedriver, options=options)
 
 dfs = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')
 
@@ -84,9 +83,7 @@ def update_all_tables():
             for td in baseTable:
                 arr = td.text.split(' ')
                 dte = globais.fmt_date(arr[0], arr[1], arr[2])
-                print(dte)
-                print(lastdt)
-                print('-------------')
+
                 #if (dte == lastdt):
                 #    okay = True
                 #    break
@@ -105,7 +102,8 @@ def update_all_tables():
         df.to_csv(settings.workpath+'/tables/' + action_name + '.csv',sep=';' ,decimal= ',',index=False)      
 
 def create_cols(df):
-    cols = ['empresa','qtde','vl_pago','vl_atual','lucro_des','al_comprar','al_vender','status','profit','table_code', 'mme5', 'mme15', 'mme30','fxmin45','fxmax45', 'fxminrg','fxmaxrg']
+    cols = ['empresa','qtde','vl_pago','vl_atual','lucro_des','al_comprar','al_vender','status','profit',
+            'table_code', 'mme5', 'mme15', 'mme30','fxmin45','fxmax45', 'fxminrg','fxmaxrg', 'aberturadia', 'minimadia', 'maximadia','stsmme']
     
     for col in cols:        
         if col not in df.columns:
@@ -136,6 +134,8 @@ def update(tempo):
             telbot.send((row['empresa'] + ': ' + data[0].text + ' -. Adic. Info: ' + data[1].text))
                   
             df.loc[df['empresa'] == row['empresa'], 'vl_atual'] = float(str(data[0].text).replace(',','.').replace(' BRL',''))
+             
+            
         except:
             telbot.send('''Error on update data of %s''' % (row['empresa']) )
     
@@ -175,16 +175,18 @@ def update(tempo):
                 if (row['vl_atual'] <=  row['al_comprar']):
                     telbot.send(row['empresa'] + ': This with indicative of purchase with the value: R$' + str(row['vl_atual']))            
                     
-                    
+        
+        globais.save_mme(settings, row['table_code'])    
+        df.loc[df['empresa'] == row['empresa'], 'stsmme'] = globais.analisys_mme(settings, row['table_code'])
         
         df.loc[df['empresa'] == row['empresa'], 'mme5'] = globais.performs_mme(settings, row['table_code'], 17)
         df.loc[df['empresa'] == row['empresa'], 'mme15'] = globais.performs_mme(settings, row['table_code'], 72)
         df.loc[df['empresa'] == row['empresa'], 'mme30'] = globais.performs_mme(settings, row['table_code'], 200)
-        fxmin45,fxmax45, fxminrg,fxmaxrg = globais.performs_hitory(settings, row['table_code'])    
-        df.loc[df['empresa'] == row['empresa'], 'fxmin45'] = fxmin45
-        df.loc[df['empresa'] == row['empresa'], 'fxmax45'] = fxmax45
-        df.loc[df['empresa'] == row['empresa'], 'fxminrg'] = fxminrg
-        df.loc[df['empresa'] == row['empresa'], 'fxmaxrg'] = fxmaxrg
+        #fxmin45,fxmax45, fxminrg,fxmaxrg = globais.performs_hitory(settings, row['table_code'])    
+        df.loc[df['empresa'] == row['empresa'], 'fxmin45'] = 0#fxmin45
+        df.loc[df['empresa'] == row['empresa'], 'fxmax45'] = 0#fxmax45
+        df.loc[df['empresa'] == row['empresa'], 'fxminrg'] = 0#fxminrg
+        df.loc[df['empresa'] == row['empresa'], 'fxmaxrg'] = 0#fxmaxrg
         
         
     df.to_csv(settings.planpath,sep=';' ,decimal= ',',index=False)  
