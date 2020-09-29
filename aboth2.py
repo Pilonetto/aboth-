@@ -44,13 +44,13 @@ dfs = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')
 def new_update_tables():
     telbot.send('''Updated all tables ''')
     for index, row in dfs.iterrows(): 
-        action_name = row['table_code'] + '.SA'
+        action_name = row['table_code']
         
         telbot.send('''Updated data of: %s''' % (row['empresa']) )
         prices = pd.DataFrame()
         tickers = [row['empresa'] + '.SA']
         for i in tickers:
-            prices = web.get_data_yahoo(i,'01/01/2008')
+            prices = web.get_data_yahoo(i,'01/01/2018')
             
         
         df = pd.DataFrame (columns = ['Fechamento','Variação', 'Variação (%)', 'Abertura', 'Máxima', 'Mínima','Volume'])
