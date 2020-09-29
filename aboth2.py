@@ -49,20 +49,14 @@ def new_update_tables():
         telbot.send('''Updated data of: %s''' % (row['empresa']) )
         prices = pd.DataFrame()
         tickers = [row['empresa'] + '.SA']
+        #tickers = ['KLBN3' + '.SA']
         for i in tickers:
             prices = web.get_data_yahoo(i,'01/01/2018')
             
-        
-        df = pd.DataFrame (columns = ['Fechamento','Variação', 'Variação (%)', 'Abertura', 'Máxima', 'Mínima','Volume'])
-        df['Date']= pd.to_datetime(prices.index) 
-        df['Fechamento']= prices['Close']
-        df['Variação']= 0
-        df['Variação (%)']= 0
-        df['Abertura']= prices['Open']
-        df['Máxima']= prices['High']
-        df['Mínima']= prices['Low']
-        df['Volume']= prices['Volume']
-        df.to_csv(settings.workpath+'/tables/' + action_name + '.csv',sep=';' ,decimal= ',',index=False)      
+        prices.rename(columns ={'Close':'Fechamento', 'Open':'Abertura','High':'Máxima','Mínima':'Low'},inplace = True)
+        prices['Date'] = pd.to_datetime(prices.index) 
+        prices = prices.reset_index(drop=True)
+        prices.to_csv(settings.workpath+'/tables/' + action_name + '.csv',sep=';' ,decimal= ',',index=False)
         
         
 def update_all_tables():
