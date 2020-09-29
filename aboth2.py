@@ -17,6 +17,8 @@ from random import randint
 from cfg import Settings
 from utils import Globals
 from telbot import TelBot
+from pandas_datareader import data as web
+
 
 
 baseUrl = '''https://br.advfn.com/bolsa-de-valores/bovespa/%s/historico/mais-dados-historicos?current=%d&Date1=%d/%d/%d&Date2=%d/%d/20'''
@@ -38,6 +40,31 @@ today = datetime.now()
 
 dfs = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')
 
+
+def new_update_tables():
+    telbot.send('''Updated all tables ''')
+    for index, row in dfs.iterrows(): 
+        action_name = row['table_code'] + '.SA'
+        
+        telbot.send('''Updated data of: %s''' % (row['empresa']) )
+        prices = pd.DataFrame()
+        tickers = [row['empresa'] + '.SA']
+        for i in tickers:
+            prices = web.get_data_yahoo(i,'01/01/2008')
+            
+        
+        df = pd.DataFrame (columns = ['Fechamento','Variação', 'Variação (%)', 'Abertura', 'Máxima', 'Mínima','Volume'])
+        df['Date']= pd.to_datetime(prices.index) 
+        df['Fechamento']= prices['Close']
+        df['Variação']= 0
+        df['Variação (%)']= 0
+        df['Abertura']= prices['Open']
+        df['Máxima']= prices['High']
+        df['Mínima']= prices['Low']
+        df['Volume']= prices['Volume']
+        df.to_csv(settings.workpath+'/tables/' + action_name + '.csv',sep=';' ,decimal= ',',index=False)      
+        
+        
 def update_all_tables():
     telbot.send('''Updated all tables ''')
     for index, row in dfs.iterrows(): 
@@ -193,7 +220,7 @@ def update(tempo):
     df.to_csv(settings.planpath,sep=';' ,decimal= ',',index=False)  
     driver.stop_client()
     driver.close()
-update_all_tables()
+new_update_tables()
     
 while True:
     update(settings.interval)      
