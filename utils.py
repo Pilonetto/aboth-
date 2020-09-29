@@ -56,9 +56,13 @@ class Globals:
             dfmm = dfmm.sort_values(by=['Date'], ascending=True)
             dfmm = dfmm.reset_index(drop=True)
                         
-            dfmm['mme15'] = dfmm['Fechamento'].rolling(15).mean()
-            dfmm['mme45'] = dfmm['Fechamento'].rolling(45).mean()
-            dfmm['mme70'] = dfmm['Fechamento'].rolling(70).mean()
+            dfmm['mm15'] = dfmm['Fechamento'].rolling(15).mean()
+            dfmm["mme15"] = pd.Series.ewm(dfmm["Fechamento"], span=15).mean()
+            dfmm['mm45'] = dfmm['Fechamento'].rolling(45).mean()
+            dfmm["mme45"] = pd.Series.ewm(dfmm["Fechamento"], span=45).mean()
+            dfmm['mm70'] = dfmm['Fechamento'].rolling(70).mean()
+            dfmm["mme70"] = pd.Series.ewm(dfmm["Fechamento"], span=70).mean()
+            
             dfmm = dfmm.sort_values(by=['Date'], ascending=False)
             dfmm = dfmm.reset_index(drop=True)
             
