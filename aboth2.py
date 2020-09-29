@@ -153,10 +153,13 @@ def update(tempo):
         try:                            
             driver.get(baseUrldia % (row['empresa'],row['empresa']))
             data= driver.find_elements_by_xpath('//g-card-section/span')
-            telbot.send((row['empresa'] + ': ' + data[0].text + ' -. Adic. Info: ' + data[1].text))
-                  
+            telbot.send((row['empresa'] + ': ' + data[0].text + ' -. Adic. Info: ' + data[1].text))                  
             df.loc[df['empresa'] == row['empresa'], 'vl_atual'] = float(str(data[0].text).replace(',','.').replace(' BRL',''))
-             
+            
+            precos = driver.find_elements_by_xpath('//*[contains(concat( " ", @class, " " ), concat( " ", "iyjjgb", " " ))]')
+            df.loc[df['empresa'] == row['empresa'], 'aberturadia'] = float(str(precos[0].text).replace(',','.'))
+            df.loc[df['empresa'] == row['empresa'], 'maximadia'] = float(str(precos[1].text).replace(',','.'))
+            df.loc[df['empresa'] == row['empresa'], 'minimadia'] = float(str(precos[2].text).replace(',','.'))             
             
         except:
             telbot.send('''Error on update data of %s''' % (row['empresa']) )
