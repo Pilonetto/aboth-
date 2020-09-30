@@ -23,14 +23,13 @@ import schedule
 
 
 baseUrl = '''https://br.advfn.com/bolsa-de-valores/bovespa/%s/historico/mais-dados-historicos?current=%d&Date1=%d/%d/%d&Date2=%d/%d/20'''
-
+global fistExec
 
 settings = Settings()
 globais = Globals()
 telbot = TelBot()
 
 print('''Hello Sir, I am TAT - the action trader robot''' )
-
 
 chromedriver = settings.workpath+'/chromedriver_linux64/chromedriver.exe'
 
@@ -115,7 +114,7 @@ def new_update_tables():
 
 
     
-def update(tempo):
+def update(tempo, fExec):
 #    driver = webdriver.Chrome(executable_path=chromedriver, options=options)
     
 #    baseUrldia = '''https://www.google.com/search?q=%s&rlz=1C1CHBD_pt-PTBR875BR875&oq=%s&aqs=chrome..69i57j0l7.1615j0j7&sourceid=chrome&ie=UTF-8'''
@@ -189,11 +188,12 @@ def update(tempo):
         
         globais.save_mme(settings, row['table_code'])    
         padrao, atencao = globais.tendence_mme(settings, row['table_code'])   
-        if (row['stsmme'] != padrao):
-            telbot.send(''' %s mudou o padrão de %d para %d''' % (row['empresa'],row['stsmme'],padrao ));  
-              
-        if (row['obsmme'] != atencao):
-            telbot.send('''Observação sobre %s, %s''' % (row['empresa'],atencao )); 
+        if (fExec == True):
+            if (row['stsmme'] != padrao):
+                telbot.send(''' %s mudou o padrão de %d para %d''' % (row['empresa'],row['stsmme'],padrao ));  
+                  
+            if (row['obsmme'] != atencao):
+                telbot.send('''Observação sobre %s, %s''' % (row['empresa'],atencao )); 
             
         df.loc[df['empresa'] == row['empresa'], 'stsmme'] = padrao
         df.loc[df['empresa'] == row['empresa'], 'obsmme'] = atencao
@@ -219,7 +219,7 @@ def update(tempo):
         df.loc[df['empresa'] == row['empresa'], 'vl_pago'] = row['vl_pago']
         df.loc[df['empresa'] == row['empresa'], 'dtacompra'] = row['dtacompra']
         
-        if df.loc[df['empresa'] == row['empresa']].dtacompra.values[0] == '0':
+        if (df.loc[df['empresa'] == row['empresa']].dtacompra.values[0] == '0') | (df.loc[df['empresa'] == row['empresa']].dtacompra.values[0] == 0):
             df.loc[df['empresa'] == row['empresa'], 'bloqueada'] = False
         else:
             mx_ = pd.to_datetime(df.loc[df['empresa'] == row['empresa']].dtacompra.values[0])
@@ -246,7 +246,8 @@ def close_market():
 
 schedule.every().day.at("19:32").do(open_market)
 schedule.every().day.at("19:35").do(close_market)
-    
+firstExec = True    
 while True:
     schedule.run_pending()
-    update(settings.interval)      
+    update(settings.interval, firstExec) 
+    firstExec = False     
