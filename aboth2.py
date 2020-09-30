@@ -188,7 +188,7 @@ def update(tempo, fExec):
         
         globais.save_mme(settings, row['table_code'])    
         padrao, atencao = globais.tendence_mme(settings, row['table_code'])   
-        if (fExec == True):
+        if (fExec == False):
             if (row['stsmme'] != padrao):
                 telbot.send(''' %s mudou o padrão de %d para %d''' % (row['empresa'],row['stsmme'],padrao ));  
                   
@@ -222,10 +222,13 @@ def update(tempo, fExec):
         if (df.loc[df['empresa'] == row['empresa']].dtacompra.values[0] == '0') | (df.loc[df['empresa'] == row['empresa']].dtacompra.values[0] == 0):
             df.loc[df['empresa'] == row['empresa'], 'bloqueada'] = False
         else:
-            mx_ = pd.to_datetime(df.loc[df['empresa'] == row['empresa']].dtacompra.values[0])
-            mx__ = pd.to_datetime(datetime.today())
-            df.loc[df['empresa'] == row['empresa'], 'bloqueada'] = mx__.strftime("%m/%d/%Y") == mx_.strftime("%m/%d/%Y")
-         
+            try:
+                mx_ = pd.to_datetime(df.loc[df['empresa'] == row['empresa']].dtacompra.values[0])
+                mx__ = pd.to_datetime(datetime.today())
+                df.loc[df['empresa'] == row['empresa'], 'bloqueada'] = mx__.strftime("%m/%d/%Y") == mx_.strftime("%m/%d/%Y")
+            except:
+                df.loc[df['empresa'] == row['empresa'], 'bloqueada'] = False
+                print('Falha ao converter data')
         
         
     
