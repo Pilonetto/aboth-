@@ -19,6 +19,23 @@ from sqlalchemy import create_engine
 from random import randint
 from cfg import Settings
 from utils import Globals
+import threading
+
+
+
+def f(tempo):    
+        
+    time.sleep(tempo)
+
+      
+    x = threading.Thread(target=f, args=(interval,)) 
+    x.start()        
+    
+interval = 300 # 5 minutos
+#x = threading.Thread(target=f, args=(interval,)) 
+#x.start()
+
+
 
 class BotEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -48,6 +65,49 @@ def empresas():
         except:
             return  json.dumps({'test':False})          
 
+
+@app.route('/addativo/<nome>',methods = ['GET'])
+def addativo(nome):
+    if request.method == 'GET':        
+        try:                   
+            df = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')
+            dic = {'empresa': nome,'qtde':0,'vl_pago':0,'vl_atual':0,'lucro_des':0,'al_comprar':0,'al_vender':0,'status':0,'profit':0,
+            'table_code':nome, 'mme5':0, 'mme15':0, 'mme30':0,'fxmin45':0,'fxmax45':0, 'fxminrg':0,'fxmaxrg':0, 'aberturadia':0, 'minimadia':0, 'maximadia':0,'stsmme':0}
+            
+            df = df.append(dic, ignore_index=True) 
+            
+            df.to_csv(settings.planpath,sep=';' ,decimal= ',',index=False)  
+            
+            return json.dumps({'test':True})
+        except:
+            return  json.dumps({'test':False})
+        
+@app.route('/addqtde/<nome>/<qtde>/<preco>',methods = ['GET'])
+def addqtde(nome, qtde,preco):
+    if request.method == 'GET':        
+        try:                   
+            df = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')
+            
+            qt = df.loc[df['empresa'] == nome].qtde.values[0]
+            vl = df.loc[df['empresa'] == nome].vl_pago.values[0]
+            
+            vl = vl * qt
+            vl2 = float(preco) * int(qtde)
+            
+            vl = (vl + vl2) / (qt + int(qtde))
+                        
+            df.loc[df['empresa'] == nome, 'qtde'] = (qt + int(qtde))
+            df.loc[df['empresa'] == nome, 'vl_pago'] = vl
+            df.loc[df['empresa'] == nome, 'dtacompra'] = pd.to_datetime(datetime.today())        
+                        
+            
+            df.to_csv(settings.planpath,sep=';' ,decimal= ',',index=False)  
+            
+            return json.dumps({'test':True})
+        except:
+            return  json.dumps({'test':False})
+        
+        
 @app.route('/mediamovel/<empresa>',methods = ['GET'])
 def mediamovel(empresa):
     if request.method == 'GET':        

@@ -41,91 +41,25 @@ today = datetime.now()
 dfs = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')
 
 
-def new_update_tables():
-    telbot.send('''Updated all tables ''')
-    for index, row in dfs.iterrows(): 
-        action_name = row['table_code']
-        
-        telbot.send('''Updated data of: %s''' % (row['empresa']) )
-        prices = pd.DataFrame()
-        tickers = [row['empresa'] + '.SA']
+def create_table(name, action_name):
+    telbot.send('''Getting data of: %s''' % (name) )
+    prices = pd.DataFrame()
+    tickers = [name+ '.SA']
         #tickers = ['KLBN3' + '.SA']
-        for i in tickers:
-            prices = web.get_data_yahoo(i,'01/01/2018')
+    for i in tickers:
+        prices = web.get_data_yahoo(i,'01/01/2018')
             
-        prices.rename(columns ={'Close':'Fechamento', 'Open':'Abertura','High':'Máxima','Mínima':'Low'},inplace = True)
-        prices['Date'] = pd.to_datetime(prices.index) 
-        prices = prices.reset_index(drop=True)
-        prices.to_csv(settings.workpath+'/tables/' + action_name + '.csv',sep=';' ,decimal= ',',index=False)
-        
-        
-def update_all_tables():
-    telbot.send('''Updated all tables ''')
-    for index, row in dfs.iterrows(): 
-        #if row['empresa'] != 'SBSP3':
-        #    continue
-        action_name = row['table_code']
-        
-        telbot.send('''Updated data of: %s''' % (row['empresa']) )
-        if (os.path.exists(settings.workpath+'/tables/' + action_name + '.csv')):
-            df = pd.read_csv(settings.workpath+'/tables/' + action_name + '.csv',sep=';' ,decimal= ',')
-            if df.empty:
-                telbot.send('''%s table aready exist but is empty''' % (row['empresa']))
-                lastday = 1
-                lastmonth = 1
-                lastyear = 18
-            else:
-                df['Date'] = pd.to_datetime(df.Data)
-                mxDate = df['Date'].max()
-                telbot.send('''%s table aready exist and max date is %s''' % (row['empresa'], mxDate))
-                lastday = mxDate.day
-                lastmonth = mxDate.month
-                lastyear = mxDate.year -2000 # year in two digits
-                imax = len(df)
-        else:
-            telbot.send('''Creating new table for %s ''' % (row['empresa']))
-            df = pd.DataFrame (columns = ['Data',	'Fechamento','Variação', 'Variação (%)', 'Abertura', 'Máxima', 'Mínima','Volume'])
-            imax = 0
-            lastday = 1
-            lastmonth = 1
-            lastyear = 18
-        okay = False;
-        lastdt = ''
-        for page in range(9):
-            if (okay == True):
-                telbot.send('Already acted, leaving out')
-                break
-            telbot.send('Looking for page: ' + str(page))
-            
-            driver = webdriver.Chrome(executable_path=chromedriver, options=options)            
-            
-            driver.get(baseUrl % (action_name,page, lastday,lastmonth,lastyear, today.day, today.month ))    
-            baseTable = driver.find_elements_by_class_name("result");    
-            for td in baseTable:
-                arr = td.text.split(' ')
-                dte = globais.fmt_date(arr[0], arr[1], arr[2])
+    prices.rename(columns ={'Close':'Fechamento', 'Open':'Abertura','High':'Máxima','Low':'Mínima'},inplace = True)
+    prices['Date'] = pd.to_datetime(prices.index) 
+    prices = prices.reset_index(drop=True)
+    prices.to_csv(settings.workpath+'/tables/' + action_name + '.csv',sep=';' ,decimal= ',',index=False)   
+    
 
-                #if (dte == lastdt):
-                #    okay = True
-                #    break
-                new_row = pd.Series({"Data": dte,  'Fechamento' : globais.fmt_float(arr[3]) ,'Variação': globais.fmt_float(arr[4]), 'Variação (%)' : globais.fmt_float(arr[5]), 'Abertura': globais.fmt_float(arr[6]) , 'Máxima': globais.fmt_float(arr[7]), 'Mínima': globais.fmt_float(arr[8]),'Volume': arr[9]})
-                df.loc[imax] = new_row
-                lastdt = dte
-                imax += 1
-            driver.stop_client()
-            driver.close()    
-            if len(baseTable) == 0:
-                break
-            
-        df['Date'] = pd.to_datetime(df.Data)    
-        df = df.drop_duplicates()
-        df = df[~df.Volume.isin(['0'])]
-        df = df.reset_index(drop=True)
-        df.to_csv(settings.workpath+'/tables/' + action_name + '.csv',sep=';' ,decimal= ',',index=False)      
-
+    
 def create_cols(df):
     cols = ['empresa','qtde','vl_pago','vl_atual','lucro_des','al_comprar','al_vender','status','profit',
-            'table_code', 'mme5', 'mme15', 'mme30','fxmin45','fxmax45', 'fxminrg','fxmaxrg', 'aberturadia', 'minimadia', 'maximadia','stsmme']
+            'table_code', 'mme5', 'mme15', 'mme30','fxmin45','fxmax45', 'fxminrg','fxmaxrg', 'aberturadia',
+            'minimadia', 'maximadia','stsmme', 'dtacompra', 'bloqueada']
     
     for col in cols:        
         if col not in df.columns:
@@ -133,15 +67,63 @@ def create_cols(df):
             
     return df
     
-def update(tempo):
-    driver = webdriver.Chrome(executable_path=chromedriver, options=options)
+def refresh_tables(dfs):
+    telbot.send('''Refresh tables ''')    
+    for index, row in dfs.iterrows(): 
+        
+        action_name = row['table_code']   
+        if (os.path.exists(settings.workpath+'/tables/' + action_name + '.csv')):             
+            df = pd.read_csv(settings.workpath+'/tables/' +action_name +'.csv',sep=';' ,decimal= ',') 
+        else:
+            df = pd.DataFrame()
+            
+        if df.empty:
+            create_table(row['empresa'], action_name)
+        else:
+            print('''Refreshing data of: %s''' % (row['empresa']) )       
+            mx = df[df['Date'] == df['Date'].max()].Date.values[0] 
+            prices = web.get_data_yahoo(row['empresa']+ '.SA',mx)
+            #prices = web.get_data_yahoo('CIEL3'+ '.SA',mx)
+            prices.rename(columns ={'Close':'Fechamento', 'Open':'Abertura','High':'Máxima','Low':'Mínima'},inplace = True)
+            prices['Date'] = pd.to_datetime(prices.index) 
+            df['Date'] = pd.to_datetime(df['Date'] )
+            prices = prices.reset_index(drop=True)            
+            df = pd.concat([df, prices], axis=0, join='outer', ignore_index=True, keys=None,
+                          levels=None, names=None, verify_integrity=False, copy=True)    
+            df = df.drop_duplicates(subset=['Date'], keep='first')
+            df = df.sort_values(by=['Date'], ascending=False)
+            df = df.reset_index(drop=True)  
+            df.to_csv(settings.workpath+'/tables/' + action_name + '.csv',sep=';' ,decimal= ',',index=False)   
+            mx_ = pd.to_datetime(df[df['Date'] == df['Date'].max()].Date.values[0])
+            mx__ = pd.to_datetime(datetime.today())
+            if mx__.strftime("%m/%d/%Y") == mx_.strftime("%m/%d/%Y"):
+                idx = df[df['Date'] == df['Date'].max()].index[0]                
+                dfs.loc[dfs['empresa'] == row['empresa'], 'vl_atual'] = df['Fechamento'][idx]
+                dfs.loc[dfs['empresa'] == row['empresa'], 'aberturadia'] = df['Abertura'][idx]
+                dfs.loc[dfs['empresa'] == row['empresa'], 'maximadia'] = df['Máxima'][idx]
+                dfs.loc[dfs['empresa'] == row['empresa'], 'minimadia'] = df['Mínima'][idx]     
+                
+        
+
+def new_update_tables():
+    telbot.send('''Updated all tables ''')
+    for index, row in dfs.iterrows(): 
+        create_table(row['empresa'], row['table_code'] )
+        
+          
+
+
     
-    baseUrldia = '''https://www.google.com/search?q=%s&rlz=1C1CHBD_pt-PTBR875BR875&oq=%s&aqs=chrome..69i57j0l7.1615j0j7&sourceid=chrome&ie=UTF-8'''
+def update(tempo):
+#    driver = webdriver.Chrome(executable_path=chromedriver, options=options)
+    
+#    baseUrldia = '''https://www.google.com/search?q=%s&rlz=1C1CHBD_pt-PTBR875BR875&oq=%s&aqs=chrome..69i57j0l7.1615j0j7&sourceid=chrome&ie=UTF-8'''
     df = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')
     
     df = create_cols(df)
     
     df['status'] = df['status'].astype('int32')    
+    df['qtde'] = df['qtde'].astype('int32')
     #time.sleep(tempo)
 
     telbot.send('''  ''')    
@@ -149,20 +131,21 @@ def update(tempo):
     telbot.send('''  ''')    
     telbot.send('''These are your companies with updated values''')
     telbot.send('''  ''')      
-    for index, row in df.iterrows(): 
-        try:                            
-            driver.get(baseUrldia % (row['empresa'],row['empresa']))
-            data= driver.find_elements_by_xpath('//g-card-section/span')
-            telbot.send((row['empresa'] + ': ' + data[0].text + ' -. Adic. Info: ' + data[1].text))                  
-            df.loc[df['empresa'] == row['empresa'], 'vl_atual'] = float(str(data[0].text).replace(',','.').replace(' BRL',''))
+    refresh_tables(df)
+#    for index, row in df.iterrows(): 
+#        try:                            
+#            driver.get(baseUrldia % (row['empresa'],row['empresa']))
+#            data= driver.find_elements_by_xpath('//g-card-section/span')
+#            telbot.send((row['empresa'] + ': ' + data[0].text + ' -. Adic. Info: ' + data[1].text))                  
+#            df.loc[df['empresa'] == row['empresa'], 'vl_atual'] = float(str(data[0].text).replace(',','.').replace(' BRL',''))
             
-            precos = driver.find_elements_by_xpath('//*[contains(concat( " ", @class, " " ), concat( " ", "iyjjgb", " " ))]')
-            df.loc[df['empresa'] == row['empresa'], 'aberturadia'] = float(str(precos[0].text).replace(',','.'))
-            df.loc[df['empresa'] == row['empresa'], 'maximadia'] = float(str(precos[1].text).replace(',','.'))
-            df.loc[df['empresa'] == row['empresa'], 'minimadia'] = float(str(precos[2].text).replace(',','.'))             
-            
-        except:
-            telbot.send('''Error on update data of %s''' % (row['empresa']) )
+#            precos = driver.find_elements_by_xpath('//*[contains(concat( " ", @class, " " ), concat( " ", "iyjjgb", " " ))]')
+#            df.loc[df['empresa'] == row['empresa'], 'aberturadia'] = float(str(precos[0].text).replace(',','.'))
+#            df.loc[df['empresa'] == row['empresa'], 'maximadia'] = float(str(precos[1].text).replace(',','.'))
+#            df.loc[df['empresa'] == row['empresa'], 'minimadia'] = float(str(precos[2].text).replace(',','.'))             
+#            
+#        except:
+#            telbot.send('''Error on update data of %s''' % (row['empresa']) )
     
     
     
@@ -173,7 +156,9 @@ def update(tempo):
     telbot.send(''' let's see what steps to take ''')
     telbot.send('''  ''')    
     for index, row in df.iterrows():
-        
+        if (row['qtde'] > 0):
+            df.loc[df['empresa'] == row['empresa'], 'status'] = 0  
+            
         if (int(row['status']) == 0):
             if (row['qtde'] == 0):                 
                 df.loc[df['empresa'] == row['empresa'], 'profit'] = 0
@@ -202,21 +187,39 @@ def update(tempo):
                     
         
         globais.save_mme(settings, row['table_code'])    
-        df.loc[df['empresa'] == row['empresa'], 'stsmme'] = globais.analisys_mme(settings, row['table_code'])
+        padrao, atencao = globais.tendence_mme(settings, row['table_code'])   
+        df.loc[df['empresa'] == row['empresa'], 'stsmme'] = padrao
+        df.loc[df['empresa'] == row['empresa'], 'obsmme'] = atencao
         
-        df.loc[df['empresa'] == row['empresa'], 'mme5'] = globais.performs_mme(settings, row['table_code'], 17)
-        df.loc[df['empresa'] == row['empresa'], 'mme15'] = globais.performs_mme(settings, row['table_code'], 72)
-        df.loc[df['empresa'] == row['empresa'], 'mme30'] = globais.performs_mme(settings, row['table_code'], 200)
+        #df.loc[df['empresa'] == row['empresa'], 'mme5'] = globais.performs_mme(settings, row['table_code'], 17)
+        #df.loc[df['empresa'] == row['empresa'], 'mme15'] = globais.performs_mme(settings, row['table_code'], 72)
+        #df.loc[df['empresa'] == row['empresa'], 'mme30'] = globais.performs_mme(settings, row['table_code'], 200)
         #fxmin45,fxmax45, fxminrg,fxmaxrg = globais.performs_hitory(settings, row['table_code'])    
         df.loc[df['empresa'] == row['empresa'], 'fxmin45'] = 0#fxmin45
         df.loc[df['empresa'] == row['empresa'], 'fxmax45'] = 0#fxmax45
         df.loc[df['empresa'] == row['empresa'], 'fxminrg'] = 0#fxminrg
         df.loc[df['empresa'] == row['empresa'], 'fxmaxrg'] = 0#fxmaxrg
         
+
+    
+    #sincroniza os dfs
+    dfupdates = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')            
+    for index, row in dfupdates.iterrows():        
+        if row['empresa'] not in pd.Series(df['empresa']).values:
+            df = df.append(row, ignore_index=True) 
+        df.loc[df['empresa'] == row['empresa'], 'qtde'] = row['qtde']
+        df.loc[df['empresa'] == row['empresa'], 'vl_pago'] = row['vl_pago']
+        df.loc[df['empresa'] == row['empresa'], 'dtacompra'] = row['dtacompra']    
+        mx_ = df.loc[df['empresa'] == row['empresa']].dtacompra.values[0]
+        mx__ = pd.to_datetime(datetime.today())
+        df.loc[df['empresa'] == row['empresa'], 'bloqueada'] = mx__.strftime("%m/%d/%Y") == mx_.strftime("%m/%d/%Y")
+         
         
+        
+    
     df.to_csv(settings.planpath,sep=';' ,decimal= ',',index=False)  
-    driver.stop_client()
-    driver.close()
+#    driver.stop_client()
+#    driver.close()
 new_update_tables()
     
 while True:

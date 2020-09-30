@@ -113,6 +113,129 @@ class Globals:
             
             
         return res
+    
+    def tendence_mme(self,settings, name):
+        print('''Analyzing patterns of %s ''' % name)
+        df = pd.read_csv(settings.workpath+'/tables/' +name +'.csv',sep=';' ,decimal= ',') 
+        if df.empty:
+            padrao = 0
+            warning = ''
+        else:
+            TEND_NONE = 0
+            TEND_ALTA1 = 1
+            TEND_ALTA2 = 2
+            TEND_QUEDA1 = -1
+            TEND_QUEDA2 = -2
+            
+            df['diasqueda'] = 0
+            df['diasalta'] = 0
+            df['diabaixa15'] = 0
+            df['diaalta15'] = 0
+            df['15diff'] = abs(df['mme15'] - df['mme45'])
+            df['diffal1545'] = 0
+            df['diffdim1545'] = 0
+            df['tendencia'] = TEND_NONE
+            df['atencao'] = 'Nada a acrescentar'
+            
+            for i in range(len(df)):
+                dias = 0  
+                dias2 = 0 
+                dias3 = 0 
+                
+                if (df['mme15'][i] <= df['mme45'][i] ):        
+                    for j in range(i,len(df)):
+                        if(df['mme15'][j] <= df['mme45'][j] ):
+                           dias += 1               
+                        else:                
+                            df.diabaixa15.iloc[i] = dias  
+                            dias = 0
+                            break
+                dias = 0      
+                if (df['mme15'][i] >= df['mme45'][i] ):        
+                    for j in range(i,len(df)):
+                        if(df['mme15'][j] >= df['mme45'][j] ):
+                           dias += 1               
+                        else:                
+                            df.diaalta15.iloc[i] = dias  
+                            dias = 0
+                            break        
+                        
+                for j in range(i,len(df)-1):
+                    if(df['15diff'][j] > df['15diff'][j+1] ):
+                        dias += 1               
+                    else:                
+                        df.diffal1545.iloc[i] = dias  
+                        dias = 0
+                        break   
+                         
+                    
+                for j in range(i,len(df)-1):
+                    if(df['15diff'][j] <= df['15diff'][j+1] ):
+                        dias += 1               
+                    else:                
+                        df.diffdim1545.iloc[i] = dias  
+                        dias = 0
+                        break       
+                    
+                for j in range(i,len(df)-1):        
+                    if(df['Fechamento'][j] > df['Fechamento'][j+1] ):
+                        dias2 += 1               
+                    else:                
+                        df.diasalta.iloc[i] = dias2  
+                        dias2 = 0
+                        break   
+                for j in range(i,len(df)-1):          
+                    if(df['Fechamento'][j] <= df['Fechamento'][j+1] ):
+                        dias3 += 1               
+                    else:                
+                        df.diasqueda.iloc[i] = dias3  
+                        dias3 = 0
+                        break   
+                try: 
+                    #alta          
+                    if (df['mme15'][i] <= df['mme45'][i]):   
+                        if (df['mme15'][i] > df['mme15'][i+1]) & (df['mme15'][i] > df['mme15'][i+2]) & (df['mme15'][i] > df['mme15'][i+3]):   # a tendencia só se confirma se o valor não estiver caindo
+                            if(df['diabaixa15'][i] >= 3) & (df['diffdim1545'][i] >= 3) :
+                                df.tendencia.iloc[i] = TEND_ALTA1  
+                            if(df['diabaixa15'][i] >= 6) & (df['diffdim1545'][i] >= 6):
+                                df.tendencia.iloc[i] = TEND_ALTA2        
+                    if (df['mme15'][i] > df['mme45'][i]):    
+                        if (df['mme15'][i] > df['mme15'][i+1]) & (df['mme15'][i] > df['mme15'][i+2]) & (df['mme15'][i] > df['mme15'][i+3]):   # a tendencia só se confirma se o valor não estiver caindo
+                            if(df['diaalta15'][i] >= 3) & (df['diffal1545'][i] >= 3):
+                                df.tendencia.iloc[i] = TEND_ALTA1  
+                            if(df['diffal1545'][i] >= 6) & (df['diffal1545'][i] >= 6):
+                                df.tendencia.iloc[i] = TEND_ALTA2        
+                            
+                    
+                    
+                   #Queda 
+                    if (df['mme15'][i] <= df['mme45'][i]):   
+                        if (df['mme15'][i] < df['mme15'][i+1]) & (df['mme15'][i] < df['mme15'][i+2]) & (df['mme15'][i] < df['mme15'][i+3]):   # a tendencia só se confirma se o valor não estiver caindo
+                            if(df['diabaixa15'][i] >= 3) & (df['diffal1545'][i] >= 3) :
+                                df.tendencia.iloc[i] = TEND_QUEDA1  
+                            if(df['diabaixa15'][i] >= 6) & (df['diffal1545'][i] >= 6):
+                                df.tendencia.iloc[i] = TEND_QUEDA2         
+                    if (df['mme15'][i] > df['mme45'][i]):    
+                        if (df['mme15'][i] < df['mme15'][i+1]) & (df['mme15'][i] < df['mme15'][i+2]) & (df['mme15'][i] < df['mme15'][i+3]):   # a tendencia só se confirma se o valor não estiver caindo            
+                            if(df['diaalta15'][i] >= 3) & (df['diffdim1545'][i] >= 3):
+                                df.tendencia.iloc[i] = TEND_QUEDA1  
+                            if(df['diffal1545'][i] >= 6) & (df['diffdim1545'][i] >= 6):
+                                df.tendencia.iloc[i] = TEND_QUEDA2       
+                            
+                    if(df['diasqueda'][i] >= 3) :
+                        df.atencao.iloc[i] = str(df['diasqueda'][i]) + ' dias consecutivos de queda'
+                    if(df['diasalta'][i] >= 3) :
+                        df.atencao.iloc[i] = str(df['diasqueda'][i]) + ' dias consecutivos de alta'               
+                        
+                        
+                except:
+                    df.tendencia.iloc[i] = TEND_NONE
+                    
+        padrao = df[df['Date'] == df['Date'].max()].tendencia.values[0]  
+        warning = df[df['Date'] == df['Date'].max()].atencao.values[0]     
+        df.to_csv(settings.workpath+'/tables/' +name +'.csv',sep=';' ,decimal= ',',index=False)
+        
+        return padrao,warning    
     def performs_hitory(self,settings, name):
         df = pd.read_csv(settings.workpath+'/tables/' +name +'.csv',sep=';' ,decimal= ',') 
         if df.empty:
