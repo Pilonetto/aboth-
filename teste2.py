@@ -29,12 +29,12 @@ globais = Globals()
 
 
 # Import CSV file into pandas dataframe
-df = pd.read_csv(settings.workpath+'/tables/' +'aes-tiete-TIET11.csv',sep=';' ,decimal= ',')
+df = pd.read_csv(settings.workpath+'/tables/' +'magazine-luiza-on-MGLU3.csv',sep=';' ,decimal= ',')
 
 globais.save_mme(settings,'aes-tiete-TIET11')
 
 
-df = pd.read_csv(settings.workpath+'/tables/' +'aes-tiete-TIET11.csv',sep=';' ,decimal= ',')
+df = pd.read_csv(settings.workpath+'/tables/' +'magazine-luiza-on-MGLU3.csv',sep=';' ,decimal= ',')
 #df = df.head(70)
 
 df['diasqueda'] = 0
@@ -44,7 +44,7 @@ df['diaalta15'] = 0
 df['15diff'] = df['mme15'] - df['mme45']
 df['diffal1545'] = 0
 df['diffdim1545'] = 0
-
+df['tendencia'] = 'Sem tendência'
 
 for i in range(len(df)):
     dias = 0  
@@ -99,4 +99,46 @@ for i in range(len(df)):
         else:                
             df.diasqueda.iloc[i] = dias3  
             dias3 = 0
-            break              
+            break   
+    try: 
+        #alta          
+        if (df['mme15'][i] <= df['mme45'][i]):   
+            if (df['mme15'][i] > df['mme15'][i+1]) & (df['mme15'][i] > df['mme15'][i+2]) & (df['mme15'][i] > df['mme15'][i+3]):   # a tendencia só se confirma se o valor não estiver caindo
+                if(df['diabaixa15'][i] >= 3) & (df['diffdim1545'][i] >= 3) :
+                    df.tendencia.iloc[i] = 'Fraca tendência de alta - 01'  
+                if(df['diabaixa15'][i] >= 6) & (df['diffdim1545'][i] >= 6):
+                    df.tendencia.iloc[i] = 'Forte tendência de alta  - 01'         
+        if (df['mme15'][i] > df['mme45'][i]):    
+            if (df['mme15'][i] > df['mme15'][i+1]) & (df['mme15'][i] > df['mme15'][i+2]) & (df['mme15'][i] > df['mme15'][i+3]):   # a tendencia só se confirma se o valor não estiver caindo
+                if(df['diaalta15'][i] >= 3) & (df['diffal1545'][i] >= 3):
+                    df.tendencia.iloc[i] = 'Fraca tendência de alta - 02'  
+                if(df['diffal1545'][i] >= 6) & (df['diffal1545'][i] >= 6):
+                    df.tendencia.iloc[i] = 'Forte tendência de alta  - 02'        
+                
+        if(df['diasqueda'][i] >= 3) :
+            df.tendencia.iloc[i] = str(df['diasqueda'][i]) + ' dias consecutivos de queda'
+        
+       #Queda 
+        if (df['mme15'][i] <= df['mme45'][i]):   
+            if (df['mme15'][i] < df['mme15'][i+1]) & (df['mme15'][i] < df['mme15'][i+2]) & (df['mme15'][i] < df['mme15'][i+3]):   # a tendencia só se confirma se o valor não estiver caindo
+                print('caindo a 3 dias',i)
+                if(df['diabaixa15'][i] >= 3) & (df['diffal1545'][i] >= 3) :
+                    df.tendencia.iloc[i] = 'Fraca tendência de queda - 01'  
+                if(df['diabaixa15'][i] >= 6) & (df['diffal1545'][i] >= 6):
+                    df.tendencia.iloc[i] = 'Forte tendência de queda  - 01'         
+        if (df['mme15'][i] > df['mme45'][i]):    
+            if (df['mme15'][i] < df['mme15'][i+1]) & (df['mme15'][i] < df['mme15'][i+2]) & (df['mme15'][i] < df['mme15'][i+3]):   # a tendencia só se confirma se o valor não estiver caindo
+                print('caindo a 3 dias')
+                if(df['diaalta15'][i] >= 3) & (df['difdim1545'][i] >= 3):
+                    df.tendencia.iloc[i] = 'Fraca tendência de queda - 02'  
+                if(df['diffal1545'][i] >= 6) & (df['difdim1545'][i] >= 6):
+                    df.tendencia.iloc[i] = 'Forte tendência de queda  - 02'        
+                
+        if(df['diasqueda'][i] >= 3) :
+            df.tendencia.iloc[i] = str(df['diasqueda'][i]) + ' dias consecutivos de queda'            
+            
+            
+    except:
+        df.tendencia.iloc[i] = 'Sem tendencia'
+
+dffinal = df[['Date', 'tendencia']].head(200)    
