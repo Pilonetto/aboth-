@@ -18,6 +18,7 @@ from cfg import Settings
 from utils import Globals
 from telbot import TelBot
 from pandas_datareader import data as web
+import schedule
 
 
 
@@ -28,7 +29,7 @@ settings = Settings()
 globais = Globals()
 telbot = TelBot()
 
-telbot.send('''Hello Sir, I am TAT - the action trader robot''' )
+print('''Hello Sir, I am TAT - the action trader robot''' )
 
 
 chromedriver = settings.workpath+'/chromedriver_linux64/chromedriver.exe'
@@ -42,7 +43,7 @@ dfs = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')
 
 
 def create_table(name, action_name):
-    telbot.send('''Getting data of: %s''' % (name) )
+    print('''Getting data of: %s''' % (name) )
     prices = pd.DataFrame()
     tickers = [name+ '.SA']
         #tickers = ['KLBN3' + '.SA']
@@ -68,7 +69,7 @@ def create_cols(df):
     return df
     
 def refresh_tables(dfs):
-    telbot.send('''Refresh tables ''')    
+    print('''Refresh tables ''')    
     for index, row in dfs.iterrows(): 
         
         action_name = row['table_code']   
@@ -106,7 +107,7 @@ def refresh_tables(dfs):
         
 
 def new_update_tables():
-    telbot.send('''Updated all tables ''')
+    print('''Updated all tables ''')
     for index, row in dfs.iterrows(): 
         create_table(row['empresa'], row['table_code'] )
         
@@ -126,17 +127,17 @@ def update(tempo):
     df['qtde'] = df['qtde'].astype('int32')
     #time.sleep(tempo)
 
-    telbot.send('''  ''')    
-    telbot.send('''  ''')    
-    telbot.send('''  ''')    
-    telbot.send('''These are your companies with updated values''')
-    telbot.send('''  ''')      
+    print('''  ''')    
+    print('''  ''')    
+    print('''  ''')    
+    print('''These are your companies with updated values''')
+    print('''  ''')      
     refresh_tables(df)
 #    for index, row in df.iterrows(): 
 #        try:                            
 #            driver.get(baseUrldia % (row['empresa'],row['empresa']))
 #            data= driver.find_elements_by_xpath('//g-card-section/span')
-#            telbot.send((row['empresa'] + ': ' + data[0].text + ' -. Adic. Info: ' + data[1].text))                  
+#            print((row['empresa'] + ': ' + data[0].text + ' -. Adic. Info: ' + data[1].text))                  
 #            df.loc[df['empresa'] == row['empresa'], 'vl_atual'] = float(str(data[0].text).replace(',','.').replace(' BRL',''))
             
 #            precos = driver.find_elements_by_xpath('//*[contains(concat( " ", @class, " " ), concat( " ", "iyjjgb", " " ))]')
@@ -145,16 +146,16 @@ def update(tempo):
 #            df.loc[df['empresa'] == row['empresa'], 'minimadia'] = float(str(precos[2].text).replace(',','.'))             
 #            
 #        except:
-#            telbot.send('''Error on update data of %s''' % (row['empresa']) )
+#            print('''Error on update data of %s''' % (row['empresa']) )
     
     
     
         
-    telbot.send('''  ''')    
-    telbot.send('''  ''')    
-    telbot.send('''  ''')    
-    telbot.send(''' let's see what steps to take ''')
-    telbot.send('''  ''')    
+    print('''  ''')    
+    print('''  ''')    
+    print('''  ''')    
+    print(''' let's see what steps to take ''')
+    print('''  ''')    
     for index, row in df.iterrows():
         if (row['qtde'] > 0):
             df.loc[df['empresa'] == row['empresa'], 'status'] = 0  
@@ -169,25 +170,31 @@ def update(tempo):
         
         if (row['status'] == 0):
             if (row['profit'] > 0):
-                telbot.send(row['empresa'] + ': current profit R$' + str(row['profit'] * row['qtde']))
+                print(row['empresa'] + ': current profit R$' + str(row['profit'] * row['qtde']))
             #else:
-            #    telbot.send(row['empresa'] + ': is in harm')
+            #    print(row['empresa'] + ': is in harm')
             if (row['al_comprar'] > 0):
                 if (row['vl_atual'] <=  row['al_comprar']):
-                    telbot.send(row['empresa'] + ': This with indicative of purchase with the value: R$' + str(row['vl_atual']))
+                    print(row['empresa'] + ': This with indicative of purchase with the value: R$' + str(row['vl_atual']))
                     
                     
             if(row['al_vender'] > 0):
                 if (row['vl_atual'] >=  row['al_vender']):
-                    telbot.send(row['empresa'] + ': This with sales call with the value: R$' + str(row['vl_atual']))
+                    print(row['empresa'] + ': This with sales call with the value: R$' + str(row['vl_atual']))
         else:
             if (row['al_comprar'] > 0):
                 if (row['vl_atual'] <=  row['al_comprar']):
-                    telbot.send(row['empresa'] + ': This with indicative of purchase with the value: R$' + str(row['vl_atual']))            
+                    print(row['empresa'] + ': This with indicative of purchase with the value: R$' + str(row['vl_atual']))            
                     
         
         globais.save_mme(settings, row['table_code'])    
         padrao, atencao = globais.tendence_mme(settings, row['table_code'])   
+        if (row['stsmme'] != padrao):
+            telbot.send(''' %s mudou o padrão de %d para %d''' % (row['empresa'],row['stsmme'],padrao ));  
+              
+        if (row['obsmme'] != atencao):
+            telbot.send('''Observação sobre %s, %s''' % (row['empresa'],atencao )); 
+            
         df.loc[df['empresa'] == row['empresa'], 'stsmme'] = padrao
         df.loc[df['empresa'] == row['empresa'], 'obsmme'] = atencao
         
@@ -204,15 +211,20 @@ def update(tempo):
     
     #sincroniza os dfs
     dfupdates = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')            
+    dfupdates = create_cols(dfupdates)
     for index, row in dfupdates.iterrows():        
         if row['empresa'] not in pd.Series(df['empresa']).values:
             df = df.append(row, ignore_index=True) 
         df.loc[df['empresa'] == row['empresa'], 'qtde'] = row['qtde']
         df.loc[df['empresa'] == row['empresa'], 'vl_pago'] = row['vl_pago']
-        df.loc[df['empresa'] == row['empresa'], 'dtacompra'] = row['dtacompra']    
-        mx_ = df.loc[df['empresa'] == row['empresa']].dtacompra.values[0]
-        mx__ = pd.to_datetime(datetime.today())
-        df.loc[df['empresa'] == row['empresa'], 'bloqueada'] = mx__.strftime("%m/%d/%Y") == mx_.strftime("%m/%d/%Y")
+        df.loc[df['empresa'] == row['empresa'], 'dtacompra'] = row['dtacompra']
+        
+        if df.loc[df['empresa'] == row['empresa']].dtacompra.values[0] == '0':
+            df.loc[df['empresa'] == row['empresa'], 'bloqueada'] = False
+        else:
+            mx_ = pd.to_datetime(df.loc[df['empresa'] == row['empresa']].dtacompra.values[0])
+            mx__ = pd.to_datetime(datetime.today())
+            df.loc[df['empresa'] == row['empresa'], 'bloqueada'] = mx__.strftime("%m/%d/%Y") == mx_.strftime("%m/%d/%Y")
          
         
         
@@ -221,6 +233,20 @@ def update(tempo):
 #    driver.stop_client()
 #    driver.close()
 new_update_tables()
+
+def open_market():
+    print('its working')
+    telbot.send('Bom diaaa! O mercado já vai abrir ;)''');
+
+def close_market():
+    print('its working')
+    telbot.send('O mercado fechou! Bom descanso :)''');                
+    
+    
+
+schedule.every().day.at("19:32").do(open_market)
+schedule.every().day.at("19:35").do(close_market)
     
 while True:
+    schedule.run_pending()
     update(settings.interval)      

@@ -70,6 +70,19 @@ class Globals:
             dfmm.to_csv(settings.workpath+'/tables/' +name +'.csv',sep=';' ,decimal= ',',index=False)
         return
     
+    def change_std(self,settings, name):
+        name = 'energias-br-on-ENBR3'
+        #dfmm = pd.read_csv(settings.workpath+'/tables/' +name +'.csv',sep=';' ,decimal= ',') 
+        dfmm = pd.read_csv('C:/Python/aboth-/tables/' +name +'.csv',sep=';' ,decimal= ',') 
+        if dfmm.empty:
+            return 0,0
+        else:
+            dfmm = dfmm.sort_values(by=['Date'], ascending=False)
+            dfmm = dfmm.reset_index(drop=True)
+            return dfmm.iloc[0].tendencia,dfmm.iloc[0].atencao
+            
+            
+        
     def performs_mme(self,settings, name, window):
         
         dfmm = pd.read_csv(settings.workpath+'/tables/' +name +'.csv',sep=';' ,decimal= ',') 

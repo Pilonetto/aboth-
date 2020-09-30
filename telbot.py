@@ -18,7 +18,6 @@ class TelBot:
         return response.json()
     
     
-    def send(self,message):
-        if (False):
-            self.telegram_bot_sendtext(message)
+    def send(self,message):        
+        self.telegram_bot_sendtext(message)
         print(message)
