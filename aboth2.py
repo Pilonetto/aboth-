@@ -60,7 +60,7 @@ def create_table(name, action_name):
 def create_cols(df):
     cols = ['empresa','qtde','vl_pago','vl_atual','lucro_des','al_comprar','al_vender','status','profit',
             'table_code', 'mme5', 'mme15', 'mme30','fxmin45','fxmax45', 'fxminrg','fxmaxrg', 'aberturadia',
-            'minimadia', 'maximadia','stsmme', 'dtacompra', 'bloqueada']
+            'minimadia', 'maximadia','stsmme','obsmme', 'dtacompra', 'bloqueada']
     
     for col in cols:        
         if col not in df.columns:
