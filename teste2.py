@@ -31,6 +31,44 @@ globais = Globals()
 # Import CSV file into pandas dataframe
 df = pd.read_csv(settings.workpath+'/tables/' +'magazine-luiza-on-MGLU3.csv',sep=';' ,decimal= ',')
 
+if df.empty:
+    print('Sem dados para análisar')
+else:
+    df = df[df['Date'] == df['Date'].max()]  
+    padrao = df.iloc[0].tendencia
+    analise = ''
+    if padrao == -2:
+        tend = 'Forte Queda'
+    elif padrao == -1:
+        tend = 'Queda'
+    elif padrao == 0:
+        tend = 'Normal'
+    elif padrao == 1:
+        tend = 'Alta'
+    elif padrao == 2:
+        tend = 'Forte Alta'
+    
+    analise = padrao + '\n'
+    if df.iloc[0].diaalta15 > 0:
+        analise += '''Os preços médios em um período menor estão maiores que os preços médios de um período maior, isso já vem ocorrendo à %d dias. \n ''' % (df.iloc[0].diaalta15)
+        if df.iloc[0].diffal1545 > 0:
+            analise += '''Além disso, a diferença da média menor para a média maior está aumentando à %d dia(s). Isso indica que os preços recentes estão mais altos! \n ''' % (df.iloc[0].diffal1545)
+        if df.iloc[0].diffdim1545 > 0:
+            analise += '''Porém, a diferença da média menor para a média maior está diminuindo à %d dia(s). Isso indica que os preços recentes estão mais baixos! \n''' % (df.iloc[0].diffdim1545)
+    if df.iloc[0].diabaixa15 > 0:
+        analise = '''Os preços médios em um período menor estão menores que os preços médios de um período maior, isso já vem ocorrendo à %d dias \n''' % (df.iloc[0].diaalta15)
+        if df.iloc[0].diffal1545 > 0:
+            analise += '''Além disso, a diferença da média menor para a média maior está aumentando à %d dia(s). Isso indica que os preços recentes estão mais baixos! \n''' % (df.iloc[0].diffal1545)
+        if df.iloc[0].diffdim1545 > 0:
+            analise += '''Porém, a diferença da média menor para a média maior está diminuindo à %d dia(s). Isso indica que os preços recentes estão mais altos! \n''' % (df.iloc[0].diffdim1545)
+            
+    if df.iloc[0].diasqueda > 0:
+        analise += ''' Ainda é importante destacar que os preços estão fechando em queda à %d dia(s) \n ''' % (df.iloc[0].diasqueda)
+    if df.iloc[0].diasalta > 0:
+        analise += ''' Ainda é importante destacar que os preços estão fechando em alta à %d dia(s) \n ''' % (df.iloc[0].diasalta)            
+        
+    analise += 'Espero ter te ajudado'
+            
 globais.save_mme(settings,'aes-tiete-TIET11')
 
 

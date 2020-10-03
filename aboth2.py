@@ -23,7 +23,8 @@ import schedule
 
 
 baseUrl = '''https://br.advfn.com/bolsa-de-valores/bovespa/%s/historico/mais-dados-historicos?current=%d&Date1=%d/%d/%d&Date2=%d/%d/20'''
-global fistExec
+
+        
 
 settings = Settings()
 globais = Globals()
@@ -38,7 +39,7 @@ options.add_argument('headless')
 
 today = datetime.now()
 
-dfs = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')
+#dfs = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')
 
 
 def create_table(name, action_name):
@@ -59,7 +60,8 @@ def create_table(name, action_name):
 def create_cols(df):
     cols = ['empresa','qtde','vl_pago','vl_atual','lucro_des','al_comprar','al_vender','status','profit',
             'table_code', 'mme5', 'mme15', 'mme30','fxmin45','fxmax45', 'fxminrg','fxmaxrg', 'aberturadia',
-            'minimadia', 'maximadia','stsmme','obsmme', 'dtacompra', 'bloqueada']
+            'minimadia', 'maximadia','stsmme','obsmme', 'dtacompra', 'bloqueada',
+            'stoploss','notsl', 'stopgainpart', 'notsgp', 'stopgaintot', 'notsgt','analisys']
     
     for col in cols:        
         if col not in df.columns:
@@ -102,36 +104,32 @@ def refresh_tables(dfs):
                 dfs.loc[dfs['empresa'] == row['empresa'], 'aberturadia'] = df['Abertura'][idx]
                 dfs.loc[dfs['empresa'] == row['empresa'], 'maximadia'] = df['Máxima'][idx]
                 dfs.loc[dfs['empresa'] == row['empresa'], 'minimadia'] = df['Mínima'][idx]     
-                
-        
+    
+    return dfs    
 
-def new_update_tables():
+def new_update_tables(dfs):
     print('''Updated all tables ''')
     for index, row in dfs.iterrows(): 
         create_table(row['empresa'], row['table_code'] )
         
           
 
-
+def update():
     
-def update(tempo, fExec):
-#    driver = webdriver.Chrome(executable_path=chromedriver, options=options)
-    
-#    baseUrldia = '''https://www.google.com/search?q=%s&rlz=1C1CHBD_pt-PTBR875BR875&oq=%s&aqs=chrome..69i57j0l7.1615j0j7&sourceid=chrome&ie=UTF-8'''
     df = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')
     
     df = create_cols(df)
     
     df['status'] = df['status'].astype('int32')    
     df['qtde'] = df['qtde'].astype('int32')
-    #time.sleep(tempo)
+    
 
     print('''  ''')    
     print('''  ''')    
     print('''  ''')    
     print('''These are your companies with updated values''')
     print('''  ''')      
-    refresh_tables(df)
+    df = refresh_tables(df)
 #    for index, row in df.iterrows(): 
 #        try:                            
 #            driver.get(baseUrldia % (row['empresa'],row['empresa']))
@@ -156,57 +154,94 @@ def update(tempo, fExec):
     print(''' let's see what steps to take ''')
     print('''  ''')    
     for index, row in df.iterrows():
-        if (row['qtde'] > 0):
-            df.loc[df['empresa'] == row['empresa'], 'status'] = 0  
+        try:
+            if (row['qtde'] > 0):
+                df.loc[df['empresa'] == row['empresa'], 'status'] = 0  
+                
+            if (int(row['status']) == 0):
+                if (row['qtde'] == 0):                 
+                    df.loc[df['empresa'] == row['empresa'], 'profit'] = 0
+                else:
+                    df.loc[df['empresa'] == row['empresa'], 'profit'] = row['vl_atual']  - row['vl_pago'] 
+            else:            
+                df.loc[df['empresa'] == row['empresa'], 'profit'] = 0    
             
-        if (int(row['status']) == 0):
-            if (row['qtde'] == 0):                 
-                df.loc[df['empresa'] == row['empresa'], 'profit'] = 0
+            if (row['status'] == 0):
+                if (row['profit'] > 0):
+                    print(row['empresa'] + ': current profit R$' + str(row['profit'] * row['qtde']))
+                #else:
+                #    print(row['empresa'] + ': is in harm')
+                if (row['al_comprar'] > 0):
+                    if (row['vl_atual'] <=  row['al_comprar']):
+                        print(row['empresa'] + ': This with indicative of purchase with the value: R$' + str(row['vl_atual']))
+                        
+                        
+                if(row['al_vender'] > 0):
+                    if (row['vl_atual'] >=  row['al_vender']):
+                        print(row['empresa'] + ': This with sales call with the value: R$' + str(row['vl_atual']))
             else:
-                df.loc[df['empresa'] == row['empresa'], 'profit'] = row['vl_atual']  - row['vl_pago'] 
-        else:            
-            df.loc[df['empresa'] == row['empresa'], 'profit'] = 0    
-        
-        if (row['status'] == 0):
-            if (row['profit'] > 0):
-                print(row['empresa'] + ': current profit R$' + str(row['profit'] * row['qtde']))
-            #else:
-            #    print(row['empresa'] + ': is in harm')
-            if (row['al_comprar'] > 0):
-                if (row['vl_atual'] <=  row['al_comprar']):
-                    print(row['empresa'] + ': This with indicative of purchase with the value: R$' + str(row['vl_atual']))
-                    
-                    
-            if(row['al_vender'] > 0):
-                if (row['vl_atual'] >=  row['al_vender']):
-                    print(row['empresa'] + ': This with sales call with the value: R$' + str(row['vl_atual']))
-        else:
-            if (row['al_comprar'] > 0):
-                if (row['vl_atual'] <=  row['al_comprar']):
-                    print(row['empresa'] + ': This with indicative of purchase with the value: R$' + str(row['vl_atual']))            
-                    
-        
-        globais.save_mme(settings, row['table_code'])    
-        padrao, atencao = globais.tendence_mme(settings, row['table_code'])   
-        if (fExec == False):
-            if (row['stsmme'] != padrao):
-                telbot.send(''' %s mudou o padrão de %d para %d''' % (row['empresa'],row['stsmme'],padrao ));  
-                  
-            if (row['obsmme'] != atencao):
-                telbot.send('''Observação sobre %s, %s''' % (row['empresa'],atencao )); 
+                if (row['al_comprar'] > 0):
+                    if (row['vl_atual'] <=  row['al_comprar']):
+                        print(row['empresa'] + ': This with indicative of purchase with the value: R$' + str(row['vl_atual']))            
+                        
             
-        df.loc[df['empresa'] == row['empresa'], 'stsmme'] = padrao
-        df.loc[df['empresa'] == row['empresa'], 'obsmme'] = atencao
-        
-        #df.loc[df['empresa'] == row['empresa'], 'mme5'] = globais.performs_mme(settings, row['table_code'], 17)
-        #df.loc[df['empresa'] == row['empresa'], 'mme15'] = globais.performs_mme(settings, row['table_code'], 72)
-        #df.loc[df['empresa'] == row['empresa'], 'mme30'] = globais.performs_mme(settings, row['table_code'], 200)
-        #fxmin45,fxmax45, fxminrg,fxmaxrg = globais.performs_hitory(settings, row['table_code'])    
-        df.loc[df['empresa'] == row['empresa'], 'fxmin45'] = 0#fxmin45
-        df.loc[df['empresa'] == row['empresa'], 'fxmax45'] = 0#fxmax45
-        df.loc[df['empresa'] == row['empresa'], 'fxminrg'] = 0#fxminrg
-        df.loc[df['empresa'] == row['empresa'], 'fxmaxrg'] = 0#fxmaxrg
-        
+            globais.save_mme(settings, row['table_code'])    
+            padrao, atencao = globais.tendence_mme(settings, row['table_code']) 
+            analisys = globais.bot_analisys(settings, row['table_code'])
+            df.loc[df['empresa'] == row['empresa'], 'analisys'] = analisys
+            
+            if (True): # Executar sómente quando executa a primeira vez
+                if (row['stsmme'] != padrao):
+                    telbot.send(''' %s mudou o padrão de %s para %s''' % (row['empresa'],globais.padrao_to_str(row['stsmme']),globais.padrao_to_str(padrao) ));  
+                      
+                if (row['obsmme'] != atencao):
+                    telbot.send('''Observação sobre %s, %s''' % (row['empresa'],atencao )); 
+            if (row['qtde'] > 0):    
+                dif = 100 -((row['vl_pago'] * 100) / row['vl_atual'])
+            
+                if (dif < -2.5):
+                    df.loc[df['empresa'] == row['empresa'], 'stoploss'] = 1
+                    if df.loc[df['empresa'] == row['empresa']].notsl.values[0] == 0:
+                        df.loc[df['empresa'] == row['empresa'], 'notsl'] = 1    
+                        telbot.send('''Stop Loss para %s ''' % (row['empresa'])); 
+                        #telbot.send('''Silenciando notificações de Stop Loss para %s ''' % (row['empresa'])); 
+                else:
+                    df.loc[df['empresa'] == row['empresa'], 'stoploss'] = 0
+                    df.loc[df['empresa'] == row['empresa'], 'notsl'] = 0                 
+                    #telbot.send('''Reiniciando notificações de Stop Loss para %s ''' % (row['empresa'])); 
+                
+                if (dif >= 2.5) & (dif < 10):
+                    df.loc[df['empresa'] == row['empresa'], 'stopgainpart'] = 1
+                    if df.loc[df['empresa'] == row['empresa']].notsgp.values[0] == 0:
+                        df.loc[df['empresa'] == row['empresa'], 'notsgp'] = 1                        
+                        telbot.send('''Saída parcial para %s ''' % (row['empresa'])); 
+                else:
+                    df.loc[df['empresa'] == row['empresa'], 'stopgainpart'] = 0
+                    df.loc[df['empresa'] == row['empresa'], 'notsgp'] = 0  
+                    
+                if (dif >= 10):
+                    df.loc[df['empresa'] == row['empresa'], 'stopgaintot'] = 1
+                    if df.loc[df['empresa'] == row['empresa']].notsgt.values[0] == 0:
+                        df.loc[df['empresa'] == row['empresa'], 'notsgt'] = 1                        
+                        telbot.send('''Saída total para %s ''' % (row['empresa'])); 
+                else:
+                    df.loc[df['empresa'] == row['empresa'], 'stopgaintot'] = 0
+                    df.loc[df['empresa'] == row['empresa'], 'notsgt'] = 0                  
+                    
+            df.loc[df['empresa'] == row['empresa'], 'stsmme'] = padrao
+            df.loc[df['empresa'] == row['empresa'], 'obsmme'] = atencao
+            
+            #df.loc[df['empresa'] == row['empresa'], 'mme5'] = globais.performs_mme(settings, row['table_code'], 17)
+            #df.loc[df['empresa'] == row['empresa'], 'mme15'] = globais.performs_mme(settings, row['table_code'], 72)
+            #df.loc[df['empresa'] == row['empresa'], 'mme30'] = globais.performs_mme(settings, row['table_code'], 200)
+            #fxmin45,fxmax45, fxminrg,fxmaxrg = globais.performs_hitory(settings, row['table_code'])    
+            df.loc[df['empresa'] == row['empresa'], 'fxmin45'] = 0#fxmin45
+            df.loc[df['empresa'] == row['empresa'], 'fxmax45'] = 0#fxmax45
+            df.loc[df['empresa'] == row['empresa'], 'fxminrg'] = 0#fxminrg
+            df.loc[df['empresa'] == row['empresa'], 'fxmaxrg'] = 0#fxmaxrg
+        except:
+            print('Falha ao processar alguns dados')
+            continue
 
     
     #sincroniza os dfs
@@ -229,28 +264,31 @@ def update(tempo, fExec):
             except:
                 df.loc[df['empresa'] == row['empresa'], 'bloqueada'] = False
                 print('Falha ao converter data')
-        
+     
+    for index, row in df.iterrows():
+         if row['empresa'] not in pd.Series(dfupdates['empresa']).values:
+             df = df[df.empresa != row['empresa']]
+         
         
     
     df.to_csv(settings.planpath,sep=';' ,decimal= ',',index=False)  
-#    driver.stop_client()
-#    driver.close()
-new_update_tables()
+    
+df = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')    
+new_update_tables(df)
 
-def open_market():
-    print('its working')
+def open_market():    
     telbot.send('Bom diaaa! O mercado já vai abrir ;)''');
 
 def close_market():
-    print('its working')
     telbot.send('O mercado fechou! Bom descanso :)''');                
     
     
 
-schedule.every().day.at("19:32").do(open_market)
-schedule.every().day.at("19:35").do(close_market)
-firstExec = True    
+schedule.every().day.at("09:55").do(open_market)
+schedule.every().day.at("17:01").do(close_market)
+#schedule.every(15).minutes.do(update)   
 while True:
     schedule.run_pending()
-    update(settings.interval, firstExec) 
-    firstExec = False     
+    time.sleep(1)
+    update() 
+    #firstExec = False     

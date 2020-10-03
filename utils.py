@@ -63,6 +63,7 @@ class Globals:
             dfmm['mm70'] = dfmm['Fechamento'].rolling(70).mean()
             dfmm["mme70"] = pd.Series.ewm(dfmm["Fechamento"], span=70).mean()
             
+            
             dfmm = dfmm.sort_values(by=['Date'], ascending=False)
             dfmm = dfmm.reset_index(drop=True)
             
@@ -127,6 +128,18 @@ class Globals:
             
         return res
     
+    def padrao_to_str(self,padrao):
+        if padrao == -2:
+            return 'Forte Queda'
+        elif padrao == -1:
+            return 'Queda'
+        elif padrao == 0:
+            return 'Normal'
+        elif padrao == 1:
+            return 'Alta'
+        elif padrao == 2:
+            return 'Forte Alta'
+        
     def tendence_mme(self,settings, name):
         print('''Analyzing patterns of %s ''' % name)
         df = pd.read_csv(settings.workpath+'/tables/' +name +'.csv',sep=';' ,decimal= ',') 
@@ -249,6 +262,47 @@ class Globals:
         df.to_csv(settings.workpath+'/tables/' +name +'.csv',sep=';' ,decimal= ',',index=False)
         
         return padrao,warning    
+    def bot_analisys(self,settings, name):
+        df = pd.read_csv(settings.workpath+'/tables/' +name +'.csv',sep=';' ,decimal= ',') 
+        if df.empty:
+            return  'Sem dados para mim análisar :('
+        else:
+            df = df[df['Date'] == df['Date'].max()]  
+            padrao = df.iloc[0].tendencia
+            analise = ''
+            if padrao == -2:
+                tend = 'Forte Queda'
+            elif padrao == -1:
+                tend = 'Queda'
+            elif padrao == 0:
+                tend = 'Normal'
+            elif padrao == 1:
+                tend = 'Alta'
+            elif padrao == 2:
+                tend = 'Forte Alta'
+            
+            analise = '<strong>'+tend + '</strong><br><br>'
+            if df.iloc[0].diaalta15 > 0:
+                analise += '''Os preços médios em um período menor, estão maiores que os preços médios de um período maior, isso já vem ocorrendo à %d dias. <br> ''' % (df.iloc[0].diaalta15)
+                if df.iloc[0].diffal1545 > 0:
+                    analise += '''Além disso, a diferença da média menor para a média maior está aumentando à %d dia(s). Isso indica que os preços recentes estão mais altos! <br> ''' % (df.iloc[0].diffal1545)
+                if df.iloc[0].diffdim1545 > 0:
+                    analise += '''Porém, a diferença da média menor para a média maior está diminuindo à %d dia(s). Isso indica que os preços recentes estão mais baixos! <br>''' % (df.iloc[0].diffdim1545)
+            if df.iloc[0].diabaixa15 > 0:
+                analise += '''Os preços médios em um período menor estão menores que os preços médios de um período maior, isso já vem ocorrendo à %d dias <br>''' % (df.iloc[0].diabaixa15)
+                if df.iloc[0].diffal1545 > 0:
+                    analise += '''Além disso, a diferença da média menor para a média maior está aumentando à %d dia(s). Isso indica que os preços recentes estão mais baixos! <br>''' % (df.iloc[0].diffal1545)
+                if df.iloc[0].diffdim1545 > 0:
+                    analise += '''Porém, a diferença da média menor para a média maior está diminuindo à %d dia(s). Isso indica que os preços recentes estão mais altos! \n''' % (df.iloc[0].diffdim1545)
+                    
+            if df.iloc[0].diasqueda > 0:
+                analise += ''' Ainda é importante destacar que os preços estão fechando em queda à %d dia(s) <br> ''' % (df.iloc[0].diasqueda)
+            if df.iloc[0].diasalta > 0:
+                analise += ''' Ainda é importante destacar que os preços estão fechando em alta à %d dia(s) <br> ''' % (df.iloc[0].diasalta)            
+                
+            analise += '<br><br>Espero ter te ajudado'            
+            return  analise
+    
     def performs_hitory(self,settings, name):
         df = pd.read_csv(settings.workpath+'/tables/' +name +'.csv',sep=';' ,decimal= ',') 
         if df.empty:

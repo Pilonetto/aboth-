@@ -22,7 +22,7 @@ plt.rcParams['figure.figsize'] = [12, 7]
 
 plt.rc('font', size=14)
 
-dffull = pd.read_csv(settings.workpath+'/tables/' +'banco-do-brasil-on-BBAS3.csv',sep=';' ,decimal= ',')
+dffull = pd.read_csv(settings.workpath+'/tables/' +'irb-brasil-on-IRBR3.csv',sep=';' ,decimal= ',')
 
 df = pd.DataFrame()
 
@@ -50,25 +50,35 @@ df['High'] = dffull['Máxima']
 df['Low'] = dffull['Mínima']
 df['Close'] = dffull['Fechamento']
 
-df['Open'] = df['Open'].astype('float32')
-df['High'] = df['High'].astype('float32')
-df['Low'] = df['Low'].astype('float32')
-df['Close'] = df['Close'].astype('float32')
+df = dffull
+
+#df['Date'] = df['Date'].apply(mpl_dates.date2num)
+
+df['Abertura'] = df['Abertura'].astype('float32')
+df['Máxima'] = df['Máxima'].astype('float32')
+df['Mínima'] = df['Mínima'].astype('float32')
+df['Fechamento'] = df['Fechamento'].astype('float32')
+
+df['suporte'] = False
+df['resistencia'] = False
+
 
 df = df.sort_values(by=['Date'], ascending=False)
 
 df = df.head(150)
 
+df = df.reset_index(drop=True)
+
 
 def isSupport(df,i):
-  support = df['Low'][i] < df['Low'][i-1]  and df['Low'][i] < df['Low'][i+1] \
-  and df['Low'][i+1] < df['Low'][i+2] and df['Low'][i-1] < df['Low'][i-2]
+  support = df['Mínima'][i] < df['Mínima'][i-1]  and df['Mínima'][i] < df['Mínima'][i+1] \
+  and df['Mínima'][i+1] < df['Mínima'][i+2] and df['Mínima'][i-1] < df['Mínima'][i-2]
 
   return support
 
 def isResistance(df,i):
-  resistance = df['High'][i] > df['High'][i-1]  and df['High'][i] > df['High'][i+1] \
-  and df['High'][i+1] > df['High'][i+2] and df['High'][i-1] > df['High'][i-2] 
+  resistance = df['Máxima'][i] > df['Máxima'][i-1]  and df['Máxima'][i] > df['Máxima'][i+1] \
+  and df['Máxima'][i+1] > df['Máxima'][i+2] and df['Máxima'][i-1] > df['Máxima'][i-2] 
 
   return resistance
 
@@ -76,9 +86,11 @@ levels = []
 levelsr = []
 for i in range(2,df.shape[0]-2):
   if isSupport(df,i):
-    levels.append((i,df['Low'][i]))
+    df['suporte'][i] = True  
+    levels.append((i,df['Mínima'][i]))
   elif isResistance(df,i):
-    levelsr.append((i,df['High'][i]))
+    levelsr.append((i,df['Máxima'][i]))
+    df['resistencia'][i] = True
     
 
 def plot_all():
@@ -93,13 +105,13 @@ def plot_all():
 
   fig.tight_layout()
 
-#  for level in levels:
-#    plt.hlines(level[1],xmin=df['Date'][level[0]],\
-#               xmax=max(df['Date']),colors='blue')
-    
-  for level in levelsr:
+  for level in levels:
     plt.hlines(level[1],xmin=df['Date'][level[0]],\
-               xmax=max(df['Date']),colors='orange')    
+              xmax=max(df['Date']),colors='blue')
+    
+#  for level in levelsr:
+#    plt.hlines(level[1],xmin=df['Date'][level[0]],\
+#               xmax=max(df['Date']),colors='orange')    
   fig.show()   
   
 plot_all()

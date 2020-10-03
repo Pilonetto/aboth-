@@ -69,15 +69,18 @@ def empresas():
 @app.route('/addativo/<nome>',methods = ['GET'])
 def addativo(nome):
     if request.method == 'GET':        
-        try:                   
+        try:               
+            
             df = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')
-            dic = {'empresa': nome,'qtde':0,'vl_pago':0,'vl_atual':0,'lucro_des':0,'al_comprar':0,'al_vender':0,'status':0,'profit':0,
-            'table_code':nome, 'mme5':0, 'mme15':0, 'mme30':0,'fxmin45':0,'fxmax45':0, 'fxminrg':0,'fxmaxrg':0, 'aberturadia':0, 
-            'minimadia':0, 'maximadia':0,'stsmme':0, 'dtacompra': '0', 'bloqueada': False}
             
-            df = df.append(dic, ignore_index=True) 
-            
-            df.to_csv(settings.planpath,sep=';' ,decimal= ',',index=False)  
+            if nome not in pd.Series(df['empresa']).values:            
+                dic = {'empresa': nome,'qtde':0,'vl_pago':0,'vl_atual':0,'lucro_des':0,'al_comprar':0,'al_vender':0,'status':0,'profit':0,
+                'table_code':nome, 'mme5':0, 'mme15':0, 'mme30':0,'fxmin45':0,'fxmax45':0, 'fxminrg':0,'fxmaxrg':0, 'aberturadia':0, 
+                'minimadia':0, 'maximadia':0,'stsmme':0, 'dtacompra': '0', 'bloqueada': False}
+                
+                df = df.append(dic, ignore_index=True) 
+                
+                df.to_csv(settings.planpath,sep=';' ,decimal= ',',index=False)  
             
             return json.dumps({'test':True})
         except:
@@ -129,7 +132,36 @@ def mediamovel(empresa):
         except:
             return  json.dumps({'test':False})          
 
+@app.route('/analise/<empresa>',methods = ['GET'])
+def analise(empresa):
+    if request.method == 'GET':        
+        try:            
+            df = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')
+            
+            code = df.loc[df['empresa'] == empresa].analisys.values[0]
 
+
+            return  json.dumps({'test':code}) 
+              
+          
+        except:
+            return  json.dumps({'test':"Não consegui fazer a análise ;("})          
+
+@app.route('/delete/<empresa>',methods = ['GET'])
+def delete(empresa):
+    if request.method == 'GET':        
+        try:            
+            df = pd.read_csv(settings.planpath,sep=';' ,decimal= ',')
+            
+            df = df[df.empresa != empresa]
+
+            df.to_csv(settings.planpath,sep=';' ,decimal= ',',index=False)  
+            return  json.dumps({'test':True}) 
+              
+          
+        except:
+            return  json.dumps({'test':False})      
+            
 @app.route('/cotacoes',methods = ['GET'])
 def cotacoes():
     if request.method == 'GET':        
